@@ -56,6 +56,10 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - LOG_FILE=/app/logs/agentic_cti.log
 
+      # Crawl4ai
+      - CRAWL4AI_BASE_URL=${CRAWL4AI_BASE_URL:-http://crawl4ai:11235}
+      - USE_CRAWL4AI=${USE_CRAWL4AI:-false}
+
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
@@ -118,6 +122,60 @@ services:
 
     # Optional: Pull model on startup
     # entrypoint: ["/bin/sh", "-c", "ollama serve & sleep 5 && ollama pull llama3.2:latest && wait"]
+
+  # Crawl4ai for advanced web scraping with JavaScript support
+  crawl4ai:
+    image: unclecode/crawl4ai:latest
+    container_name: agentic-cti-crawl4ai
+    restart: unless-stopped
+
+    ports:
+      - "11235:11235"
+
+    networks:
+      - agentic-cti-network
+
+    environment:
+      - CRAWL4AI_API_TOKEN=${CRAWL4AI_API_TOKEN:-}
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11235/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # REST API for URL submission
+  agentic-cti-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: agentic-cti-api
+    restart: unless-stopped
+
+    environment:
+      - LLM_PROVIDER=${LLM_PROVIDER:-ollama}
+      - LLM_MODEL=${LLM_MODEL:-llama3.2:latest}
+      - LLM_BASE_URL=${LLM_BASE_URL:-http://ollama:11434}
+      - CRAWL4AI_BASE_URL=${CRAWL4AI_BASE_URL:-http://crawl4ai:11235}
+      - API_RATE_LIMIT=${API_RATE_LIMIT:-100}
+      - API_RATE_LIMIT_PERIOD=${API_RATE_LIMIT_PERIOD:-60}
+
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./config:/app/config
+
+    ports:
+      - "${API_PORT:-8000}:8000"
+
+    networks:
+      - agentic-cti-network
+
+    depends_on:
+      - crawl4ai
+      - ollama
+
+    command: python -m api.main
 
   # Optional: OpenCTI (uncomment to enable)
   # opencti:

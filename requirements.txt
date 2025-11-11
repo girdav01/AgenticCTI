@@ -16,6 +16,11 @@ stix2>=3.0.1
 # Streamlit UI
 streamlit>=1.31.0
 
+# REST API
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.5.0
+
 # Logging and utilities
 urllib3>=2.1.0
 
