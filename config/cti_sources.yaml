@@ -1,0 +1,85 @@
+# Cyber Threat Intelligence Sources
+# This file contains curated CTI sources for the agent to monitor
+
+sources:
+  - name: "CISA Advisories"
+    url: "https://www.cisa.gov/news-events/cybersecurity-advisories"
+    type: "rss"
+    category: "government"
+    priority: high
+    enabled: true
+
+  - name: "US-CERT Alerts"
+    url: "https://www.cisa.gov/news-events/alerts"
+    type: "rss"
+    category: "government"
+    priority: high
+    enabled: true
+
+  - name: "SecurityWeek"
+    url: "https://www.securityweek.com"
+    type: "web"
+    category: "news"
+    priority: medium
+    enabled: true
+
+  - name: "The Hacker News"
+    url: "https://thehackernews.com"
+    type: "web"
+    category: "news"
+    priority: medium
+    enabled: true
+
+  - name: "Bleeping Computer"
+    url: "https://www.bleepingcomputer.com/news/security/"
+    type: "web"
+    category: "news"
+    priority: medium
+    enabled: true
+
+  - name: "Krebs on Security"
+    url: "https://krebsonsecurity.com"
+    type: "web"
+    category: "blog"
+    priority: medium
+    enabled: true
+
+  - name: "Dark Reading"
+    url: "https://www.darkreading.com"
+    type: "web"
+    category: "news"
+    priority: medium
+    enabled: true
+
+  - name: "Threatpost"
+    url: "https://threatpost.com"
+    type: "web"
+    category: "news"
+    priority: low
+    enabled: false
+
+  - name: "CVE Database"
+    url: "https://cve.mitre.org/cgi-bin/cvekey.cgi?keyword=critical"
+    type: "web"
+    category: "database"
+    priority: high
+    enabled: true
+
+  - name: "AlienVault OTX"
+    url: "https://otx.alienvault.com"
+    type: "api"
+    category: "threat_intel"
+    priority: high
+    enabled: false  # Requires API key
+
+# Discovery settings
+discovery:
+  enabled: true
+  search_engines:
+    - "google"
+  max_new_sources: 5
+  verification_required: true
+  blacklist:
+    - "*.ads.*"
+    - "*.marketing.*"
+    - "*.promo.*"

@@ -1,0 +1,142 @@
+version: '3.8'
+
+services:
+  agentic-cti:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: agentic-cti
+    restart: unless-stopped
+
+    environment:
+      # LLM Configuration
+      - LLM_PROVIDER=${LLM_PROVIDER:-ollama}
+      - LLM_MODEL=${LLM_MODEL:-llama3.2:latest}
+      - LLM_BASE_URL=${LLM_BASE_URL:-http://ollama:11434}
+      - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.3}
+      - LLM_MAX_TOKENS=${LLM_MAX_TOKENS:-4096}
+
+      # Email Configuration
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USE_TLS=${SMTP_USE_TLS:-true}
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - EMAIL_FROM=${EMAIL_FROM}
+      - EMAIL_TO=${EMAIL_TO}
+      - EMAIL_DAILY_TIME=${EMAIL_DAILY_TIME:-07:00}
+      - EMAIL_TIMEZONE=${EMAIL_TIMEZONE:-America/Montreal}
+
+      # STIX Export
+      - ENABLE_STIX_EXPORT=${ENABLE_STIX_EXPORT:-true}
+      - STIX_EXPORT_PATH=/app/data/stix_exports
+
+      # Trend Vision One
+      - TREND_VISION_ONE_ENABLED=${TREND_VISION_ONE_ENABLED:-false}
+      - TREND_VISION_ONE_API_KEY=${TREND_VISION_ONE_API_KEY}
+      - TREND_VISION_ONE_REGION=${TREND_VISION_ONE_REGION:-us}
+
+      # OpenCTI
+      - OPENCTI_ENABLED=${OPENCTI_ENABLED:-false}
+      - OPENCTI_URL=${OPENCTI_URL:-http://opencti:8080}
+      - OPENCTI_API_KEY=${OPENCTI_API_KEY}
+
+      # Streamlit UI
+      - STREAMLIT_PORT=${STREAMLIT_PORT:-8501}
+      - STREAMLIT_AUTH_ENABLED=${STREAMLIT_AUTH_ENABLED:-true}
+      - STREAMLIT_USERNAME=${STREAMLIT_USERNAME:-admin}
+      - STREAMLIT_PASSWORD=${STREAMLIT_PASSWORD:-changeme}
+
+      # Agent Configuration
+      - AGENT_RUN_INTERVAL=${AGENT_RUN_INTERVAL:-86400}
+      - AGENT_MAX_SOURCES=${AGENT_MAX_SOURCES:-20}
+      - AGENT_MAX_ARTICLES_PER_SOURCE=${AGENT_MAX_ARTICLES_PER_SOURCE:-10}
+
+      # Logging
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FILE=/app/logs/agentic_cti.log
+
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./config:/app/config
+
+    ports:
+      - "${STREAMLIT_PORT:-8501}:8501"
+
+    networks:
+      - agentic-cti-network
+
+    depends_on:
+      - ollama
+
+    command: python main.py schedule
+
+  # Streamlit UI (separate container for better resource management)
+  agentic-cti-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: agentic-cti-ui
+    restart: unless-stopped
+
+    environment:
+      - LLM_PROVIDER=${LLM_PROVIDER:-ollama}
+      - LLM_MODEL=${LLM_MODEL:-llama3.2:latest}
+      - LLM_BASE_URL=${LLM_BASE_URL:-http://ollama:11434}
+      - STREAMLIT_AUTH_ENABLED=${STREAMLIT_AUTH_ENABLED:-true}
+      - STREAMLIT_USERNAME=${STREAMLIT_USERNAME:-admin}
+      - STREAMLIT_PASSWORD=${STREAMLIT_PASSWORD:-changeme}
+
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./config:/app/config
+
+    ports:
+      - "8502:8501"
+
+    networks:
+      - agentic-cti-network
+
+    command: python main.py ui
+
+  # Ollama for local LLM inference
+  ollama:
+    image: ollama/ollama:latest
+    container_name: agentic-cti-ollama
+    restart: unless-stopped
+
+    volumes:
+      - ollama-data:/root/.ollama
+
+    ports:
+      - "11434:11434"
+
+    networks:
+      - agentic-cti-network
+
+    # Optional: Pull model on startup
+    # entrypoint: ["/bin/sh", "-c", "ollama serve & sleep 5 && ollama pull llama3.2:latest && wait"]
+
+  # Optional: OpenCTI (uncomment to enable)
+  # opencti:
+  #   image: opencti/platform:latest
+  #   container_name: agentic-cti-opencti
+  #   restart: unless-stopped
+  #   environment:
+  #     - OPENCTI_ADMIN_EMAIL=admin@opencti.io
+  #     - OPENCTI_ADMIN_PASSWORD=changeme
+  #     - OPENCTI_ADMIN_TOKEN=${OPENCTI_API_KEY}
+  #   ports:
+  #     - "8080:8080"
+  #   networks:
+  #     - agentic-cti-network
+
+networks:
+  agentic-cti-network:
+    driver: bridge
+
+volumes:
+  ollama-data:
+    driver: local

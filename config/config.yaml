@@ -1,0 +1,143 @@
+# AgenticCTI Default Configuration
+# This file contains default settings that can be overridden by environment variables
+
+agent:
+  name: "AgenticCTI Scanner"
+  version: "1.0.0"
+  description: "Autonomous Cyber Threat Intelligence Agent"
+
+  # Agent behavior
+  autonomous_mode: true
+  max_iterations: 10
+  decision_threshold: 0.7
+
+  # Source discovery
+  auto_discover_sources: true
+  discovery_keywords:
+    - "cyber threat intelligence"
+    - "cybersecurity news"
+    - "security advisories"
+    - "vulnerability reports"
+    - "threat analysis"
+    - "IOC feeds"
+
+  # Entity extraction
+  extract_entities:
+    - TTPs  # Tactics, Techniques, and Procedures
+    - CVEs  # Common Vulnerabilities and Exposures
+    - IOCs  # Indicators of Compromise
+    - threat_actors
+    - malware
+    - campaigns
+
+  # Summarization
+  summary_max_length: 500
+  summary_style: "actionable"  # Options: actionable, technical, executive
+
+parsing:
+  user_agent: "AgenticCTI/1.0 (Security Research Bot)"
+  timeout: 30
+  max_retries: 3
+  retry_delay: 2
+
+  # Content filtering
+  min_content_length: 200
+  max_content_length: 50000
+
+  # Rate limiting
+  requests_per_second: 2
+  respect_robots_txt: true
+
+stix:
+  version: "2.1"
+  default_marking: "TLP:WHITE"
+
+  # STIX object types to create
+  create_objects:
+    - indicator
+    - observed-data
+    - threat-actor
+    - malware
+    - attack-pattern
+    - vulnerability
+    - campaign
+    - identity
+    - relationship
+
+  # Confidence scoring
+  confidence_mapping:
+    high: 85
+    medium: 50
+    low: 30
+
+reporting:
+  formats:
+    - json
+    - markdown
+    - html
+
+  # Report sections
+  sections:
+    - executive_summary
+    - key_findings
+    - threat_actors
+    - vulnerabilities
+    - iocs
+    - recommendations
+
+  # Daily report settings
+  include_charts: true
+  include_timeline: true
+  max_items_per_section: 20
+
+notifications:
+  channels:
+    - email
+
+  # Alert conditions
+  alert_on:
+    - high_severity_cve
+    - new_threat_actor
+    - critical_vulnerability
+    - emerging_campaign
+
+  severity_levels:
+    critical: 4
+    high: 3
+    medium: 2
+    low: 1
+    info: 0
+
+mcp:
+  # Model Context Protocol settings
+  tools:
+    - web_scraper
+    - llm_analyzer
+    - stix_exporter
+    - email_notifier
+
+  endpoints:
+    - name: "trend_vision_one"
+      type: "stix_api"
+      enabled: false
+    - name: "opencti"
+      type: "graphql"
+      enabled: false
+
+  scheduling:
+    enabled: true
+    default_schedule: "0 7 * * *"  # Daily at 7 AM (cron format)
+    timezone: "America/Montreal"
+
+security:
+  # Input validation
+  validate_urls: true
+  sanitize_content: true
+
+  # API security
+  require_api_keys: true
+  rate_limit_enabled: true
+
+  # Data protection
+  encrypt_sensitive_data: true
+  mask_credentials_in_logs: true
