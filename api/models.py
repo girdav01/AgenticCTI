@@ -48,6 +48,14 @@ class ScrapeOptions(BaseModel):
         default=True,
         description="Extract CTI entities from content"
     )
+    classify_threat: bool = Field(
+        default=False,
+        description="Classify threat using ML (adds threat_type, risk_score, etc.)"
+    )
+    generate_yara: bool = Field(
+        default=False,
+        description="Generate YARA detection rules from findings"
+    )
 
 
 class ScrapeRequest(BaseModel):

@@ -29,6 +29,9 @@ from api.models import (
 from parsers.web_scraper import WebScraper
 from parsers.crawl4ai_scraper import Crawl4AIScraper
 from parsers.entity_extractor import EntityExtractor
+from ml.threat_classifier import ThreatClassifier, ThreatLevel, AlertSeverity
+from yara_rules.yara_generator import YARAGenerator
+from notifications.webhook_manager import WebhookManager, WebhookAlert, SlackWebhookFormatter
 
 # Configure logging
 logging.basicConfig(
@@ -71,6 +74,15 @@ except Exception as e:
 
 # Initialize entity extractor
 entity_extractor = EntityExtractor()
+
+# Initialize threat classifier
+threat_classifier = ThreatClassifier()
+
+# Initialize YARA generator
+yara_generator = YARAGenerator()
+
+# Initialize webhook manager
+webhook_manager = WebhookManager()
 
 
 def get_scraper(scraper_type: ScraperType):
@@ -127,9 +139,11 @@ async def process_scrape_job(job_id: str, url: str, options: dict):
 
         # Extract entities if requested
         entities = None
+        entities_dict = {}
         if options.get("extract_entities", True):
             try:
                 extracted = entity_extractor.extract_entities(scraped_content.content)
+                entities_dict = extracted
                 entities = [
                     EntityData(
                         type=entity_type,
@@ -142,6 +156,42 @@ async def process_scrape_job(job_id: str, url: str, options: dict):
             except Exception as e:
                 logger.warning(f"Entity extraction failed for job {job_id}: {e}")
 
+        # ML-based threat classification if requested
+        threat_classification = None
+        if options.get("classify_threat", False):
+            try:
+                classification = threat_classifier.classify(
+                    content=scraped_content.content,
+                    entities=entities_dict,
+                    title=scraped_content.title
+                )
+                threat_classification = {
+                    "threat_type": classification.threat_type.value,
+                    "threat_level": classification.threat_level.value,
+                    "confidence": classification.confidence,
+                    "risk_score": classification.risk_score,
+                    "indicators": classification.indicators,
+                    "recommendations": classification.recommended_actions
+                }
+                logger.info(f"Classified threat for job {job_id}: {classification.threat_type.value}")
+            except Exception as e:
+                logger.warning(f"Threat classification failed for job {job_id}: {e}")
+
+        # Generate YARA rules if requested
+        yara_rules = None
+        if options.get("generate_yara", False) and entities_dict:
+            try:
+                rules = yara_generator.generate_from_entities(
+                    entities=entities_dict,
+                    title=scraped_content.title,
+                    description=scraped_content.content[:200],
+                    source_url=url
+                )
+                yara_rules = [r.rule_content for r in rules]
+                logger.info(f"Generated {len(yara_rules)} YARA rules for job {job_id}")
+            except Exception as e:
+                logger.warning(f"YARA generation failed for job {job_id}: {e}")
+
         # Build result
         result = ScrapeResult(
             url=scraped_content.url,
@@ -151,7 +201,11 @@ async def process_scrape_job(job_id: str, url: str, options: dict):
             author=scraped_content.author,
             tags=scraped_content.tags,
             entities=entities,
-            metadata=scraped_content.metadata
+            metadata={
+                **scraped_content.metadata,
+                "threat_classification": threat_classification,
+                "yara_rules": yara_rules
+            }
         )
 
         # Update job with result
@@ -161,7 +215,39 @@ async def process_scrape_job(job_id: str, url: str, options: dict):
 
         logger.info(f"Job {job_id} completed successfully")
 
-        # TODO: Send webhook notification if configured
+        # Send webhook notification if configured
+        webhook_url = jobs[job_id].get("webhook_url")
+        if webhook_url:
+            try:
+                # Determine severity based on classification
+                severity = AlertSeverity.INFO
+                if threat_classification:
+                    threat_level_map = {
+                        "critical": AlertSeverity.CRITICAL,
+                        "high": AlertSeverity.HIGH,
+                        "medium": AlertSeverity.MEDIUM,
+                        "low": AlertSeverity.LOW,
+                        "info": AlertSeverity.INFO
+                    }
+                    severity = threat_level_map.get(
+                        threat_classification.get("threat_level", "info"),
+                        AlertSeverity.INFO
+                    )
+
+                alert = webhook_manager.create_scrape_alert(
+                    url=url,
+                    success=True,
+                    entity_count=len(entities) if entities else 0
+                )
+                alert.severity = severity
+                if threat_classification:
+                    alert.threat_classification = threat_classification
+
+                import requests
+                requests.post(webhook_url, json=alert.to_dict(), timeout=10)
+                logger.info(f"Sent webhook notification for job {job_id}")
+            except Exception as e:
+                logger.warning(f"Failed to send webhook for job {job_id}: {e}")
 
     except Exception as e:
         logger.error(f"Job {job_id} failed: {e}", exc_info=True)
@@ -308,6 +394,154 @@ async def delete_job(job_id: str):
 
     del jobs[job_id]
     logger.info(f"Deleted job {job_id}")
+
+
+# Advanced Features Endpoints
+
+@app.post("/api/v1/classify", tags=["ML Classification"])
+async def classify_content(
+    content: str = "",
+    title: Optional[str] = None,
+    entities: Optional[Dict] = None
+):
+    """
+    Classify threat content using ML.
+
+    Returns threat type, severity, risk score, and recommendations.
+    """
+    if not content:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Content is required"
+        )
+
+    try:
+        classification = threat_classifier.classify(
+            content=content,
+            entities=entities or {},
+            title=title
+        )
+
+        return {
+            "success": True,
+            "classification": {
+                "threat_type": classification.threat_type.value,
+                "threat_level": classification.threat_level.value,
+                "confidence": classification.confidence,
+                "risk_score": classification.risk_score,
+                "indicators": classification.indicators,
+                "recommendations": classification.recommended_actions,
+                "metadata": classification.metadata
+            }
+        }
+
+    except Exception as e:
+        logger.error(f"Classification error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Classification failed: {str(e)}"
+        )
+
+
+@app.post("/api/v1/yara/generate", tags=["YARA Rules"])
+async def generate_yara_rules(
+    entities: Dict[str, List[str]],
+    title: str = "Generated Rule",
+    description: str = "",
+    source_url: Optional[str] = None
+):
+    """
+    Generate YARA rules from CTI entities.
+
+    Provide entities dict with keys: hashes, domains, ips, malware, cves, etc.
+    """
+    if not entities:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Entities are required"
+        )
+
+    try:
+        rules = yara_generator.generate_from_entities(
+            entities=entities,
+            title=title,
+            description=description,
+            source_url=source_url
+        )
+
+        return {
+            "success": True,
+            "rules": [
+                {
+                    "name": rule.name,
+                    "type": rule.rule_type.value,
+                    "description": rule.description,
+                    "rule_content": rule.rule_content,
+                    "ioc_count": len(rule.iocs)
+                }
+                for rule in rules
+            ],
+            "count": len(rules)
+        }
+
+    except Exception as e:
+        logger.error(f"YARA generation error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"YARA generation failed: {str(e)}"
+        )
+
+
+@app.get("/api/v1/yara/stats", tags=["YARA Rules"])
+async def get_yara_stats():
+    """Get YARA rule generation statistics."""
+    stats = yara_generator.get_stats()
+    return {
+        "success": True,
+        "stats": stats
+    }
+
+
+@app.post("/api/v1/webhook/test", tags=["Webhooks"])
+async def test_webhook(webhook_url: HttpUrl, alert_type: str = "test"):
+    """
+    Test a webhook by sending a sample alert.
+
+    Useful for validating webhook endpoints before using them.
+    """
+    try:
+        from notifications.webhook_manager import AlertType, AlertSeverity
+
+        alert = WebhookAlert(
+            alert_id="test-" + str(uuid.uuid4()),
+            alert_type=AlertType.SCRAPE_COMPLETED,
+            severity=AlertSeverity.INFO,
+            timestamp=datetime.utcnow().isoformat() + 'Z',
+            title="Test Alert",
+            description="This is a test alert from AgenticCTI API",
+            metadata={"test": True}
+        )
+
+        import requests
+        response = requests.post(
+            str(webhook_url),
+            json=alert.to_dict(),
+            timeout=10
+        )
+        response.raise_for_status()
+
+        return {
+            "success": True,
+            "status_code": response.status_code,
+            "message": "Webhook test successful"
+        }
+
+    except Exception as e:
+        logger.error(f"Webhook test error: {e}", exc_info=True)
+        return {
+            "success": False,
+            "error": str(e)
+        }
 
 
 @app.exception_handler(Exception)
