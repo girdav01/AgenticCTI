@@ -2,6 +2,8 @@
 
 A modular, agentic Python application with full LLM autonomy for cyber threat intelligence (CTI) scanning, summarization, and export. AgenticCTI autonomously discovers CTI sources, extracts entities (TTPs, CVEs, IOCs, actors), generates actionable summaries, exports to STIX 2.1, and sends daily reports.
 
+**🎯 NEW**: Now integrated with **NG-TIP** (Next-Gen Threat Intelligence Platform) for advanced storage, graph-based analysis, RAG-powered search, and AI-assisted threat analysis. See [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) for complete integration documentation.
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![Docker](https://img.shields.io/badge/docker-enabled-brightgreen.svg)](https://www.docker.com/)
@@ -22,6 +24,7 @@ A modular, agentic Python application with full LLM autonomy for cyber threat in
 
 ### 📊 STIX 2.1 Export & Integration
 - **STIX 2.1 compliant** export of all extracted entities
+- **NG-TIP Platform** integration with graph database, RAG, and AI analysis
 - **Trend Vision One** integration via STIX API
 - **OpenCTI** integration via GraphQL/REST
 - **Configurable endpoints** and TLP markings

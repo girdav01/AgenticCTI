@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from utils.logging_config import setup_logging, get_logger
 from agents import CTIAgent
 from mcp import EmailNotifier, CTIScheduler
-from exporters import STIXExporter, TrendVisionOneClient, OpenCTIClient
+from exporters import STIXExporter, TrendVisionOneClient, OpenCTIClient, NGTIPClient
 from llm import LLMFactory
 
 # Load environment variables
@@ -47,6 +47,7 @@ class AgenticCTIApp:
         self.stix_exporter = None
         self.trend_client = None
         self.opencti_client = None
+        self.ngtip_client = None
 
         self._initialize_components()
 
@@ -120,6 +121,18 @@ class AgenticCTIApp:
                 except Exception as e:
                     logger.warning(f"Failed to initialize OpenCTI: {e}")
 
+            # Initialize NG-TIP
+            if os.getenv('NGTIP_ENABLED', 'true').lower() == 'true':
+                logger.info("Initializing NG-TIP client...")
+                try:
+                    self.ngtip_client = NGTIPClient(
+                        base_url=os.getenv('NGTIP_URL', 'http://localhost:8503'),
+                        api_key=os.getenv('NGTIP_API_KEY'),
+                        verify_ssl=os.getenv('NGTIP_SSL_VERIFY', 'true').lower() == 'true'
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to initialize NG-TIP: {e}")
+
             logger.info("All components initialized successfully")
 
         except Exception as e:
@@ -173,6 +186,21 @@ class AgenticCTIApp:
                 logger.info("Exporting to STIX...")
                 # Export logic would go here
                 logger.info("STIX export completed")
+
+            # Push to NG-TIP (if configured)
+            if self.ngtip_client and self.agent.collected_intelligence:
+                logger.info("Pushing intelligence to NG-TIP platform...")
+                try:
+                    # Push collected intelligence to NG-TIP
+                    batch_result = self.ngtip_client.ingest_batch(
+                        intelligence_items=self.agent.collected_intelligence
+                    )
+                    if batch_result:
+                        logger.info(f"Successfully pushed {len(self.agent.collected_intelligence)} items to NG-TIP")
+                    else:
+                        logger.error("Failed to push intelligence to NG-TIP")
+                except Exception as e:
+                    logger.error(f"Error pushing to NG-TIP: {e}")
 
             # Clear intelligence for next day
             self.agent.clear_intelligence()
