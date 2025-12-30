@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 # Initialize FastAPI app
 app = FastAPI(
     title="AgenticCTI API",
-    description="REST API for submitting URLs for CTI content extraction",
+    description="REST API for CTI content extraction and malware analysis",
     version=__version__,
     docs_url="/docs",
     redoc_url="/redoc"
@@ -54,6 +54,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include malware analysis routes
+try:
+    from api.malware_routes import router as malware_router
+    app.include_router(malware_router)
+    logger.info("Malware analysis routes loaded")
+except Exception as e:
+    logger.warning(f"Failed to load malware analysis routes: {e}")
 
 # In-memory job storage (replace with database in production)
 jobs: Dict[str, Dict] = {}
