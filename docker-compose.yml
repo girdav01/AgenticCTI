@@ -66,6 +66,12 @@ services:
       - CRAWL4AI_BASE_URL=${CRAWL4AI_BASE_URL:-http://crawl4ai:11235}
       - USE_CRAWL4AI=${USE_CRAWL4AI:-false}
 
+      # HexStrike AI Integration
+      - HEXSTRIKE_ENABLED=${HEXSTRIKE_ENABLED:-false}
+      - HEXSTRIKE_URL=${HEXSTRIKE_URL:-http://hexstrike-ai:8888}
+      - HEXSTRIKE_API_KEY=${HEXSTRIKE_API_KEY}
+      - HEXSTRIKE_SSL_VERIFY=${HEXSTRIKE_SSL_VERIFY:-false}
+
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
@@ -303,6 +309,29 @@ services:
   #     - "8080:8080"
   #   networks:
   #     - agentic-cti-network
+
+  # HexStrike AI MCP Server (optional)
+  # To enable, clone HexStrike AI repository and configure:
+  # 1. Clone: git clone https://github.com/0x4m4/hexstrike-ai.git
+  # 2. Build and run HexStrike AI server separately or add service below
+  # 3. Set HEXSTRIKE_ENABLED=true in .env
+  # hexstrike-ai:
+  #   build:
+  #     context: ./hexstrike-ai  # Path to cloned HexStrike AI repository
+  #     dockerfile: Dockerfile
+  #   container_name: hexstrike-ai
+  #   restart: unless-stopped
+  #   environment:
+  #     - HEXSTRIKE_PORT=8888
+  #     - HEXSTRIKE_DEBUG=${HEXSTRIKE_DEBUG:-false}
+  #   ports:
+  #     - "8888:8888"
+  #   networks:
+  #     - agentic-cti-network
+  #   volumes:
+  #     - ./hexstrike-ai:/app
+  #   # Note: HexStrike AI requires various security tools to be installed
+  #   # See HexStrike AI documentation for required tools
 
 networks:
   agentic-cti-network:

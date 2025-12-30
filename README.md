@@ -27,6 +27,7 @@ A modular, agentic Python application with full LLM autonomy for cyber threat in
 - **NG-TIP Platform** integration with graph database, RAG, and AI analysis
 - **Trend Vision One** integration via STIX API
 - **OpenCTI** integration via GraphQL/REST
+- **HexStrike AI** integration for automated security analysis of discovered IOCs
 - **Configurable endpoints** and TLP markings
 
 ### 🖥️ Streamlit UI

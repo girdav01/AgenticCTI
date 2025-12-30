@@ -123,6 +123,9 @@ mcp:
     - name: "opencti"
       type: "graphql"
       enabled: false
+    - name: "hexstrike_ai"
+      type: "mcp_server"
+      enabled: false
 
   scheduling:
     enabled: true

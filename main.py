@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from utils.logging_config import setup_logging, get_logger
 from agents import CTIAgent
 from mcp import EmailNotifier, CTIScheduler
-from exporters import STIXExporter, TrendVisionOneClient, OpenCTIClient, NGTIPClient
+from exporters import STIXExporter, TrendVisionOneClient, OpenCTIClient, NGTIPClient, HexStrikeClient
 from llm import LLMFactory
 
 # Load environment variables
@@ -48,6 +48,7 @@ class AgenticCTIApp:
         self.trend_client = None
         self.opencti_client = None
         self.ngtip_client = None
+        self.hexstrike_client = None
 
         self._initialize_components()
 
@@ -132,6 +133,24 @@ class AgenticCTIApp:
                     )
                 except Exception as e:
                     logger.warning(f"Failed to initialize NG-TIP: {e}")
+
+            # Initialize HexStrike AI
+            if os.getenv('HEXSTRIKE_ENABLED', 'false').lower() == 'true':
+                logger.info("Initializing HexStrike AI client...")
+                try:
+                    self.hexstrike_client = HexStrikeClient(
+                        base_url=os.getenv('HEXSTRIKE_URL', 'http://localhost:8888'),
+                        api_key=os.getenv('HEXSTRIKE_API_KEY'),
+                        timeout=int(os.getenv('HEXSTRIKE_TIMEOUT', 300)),
+                        verify_ssl=os.getenv('HEXSTRIKE_SSL_VERIFY', 'false').lower() == 'true'
+                    )
+                    # Test connection
+                    if self.hexstrike_client.health_check():
+                        logger.info("HexStrike AI connection verified")
+                    else:
+                        logger.warning("HexStrike AI server not accessible")
+                except Exception as e:
+                    logger.warning(f"Failed to initialize HexStrike AI: {e}")
 
             logger.info("All components initialized successfully")
 

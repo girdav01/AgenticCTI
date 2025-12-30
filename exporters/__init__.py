@@ -8,6 +8,7 @@ from .opencti_client import OpenCTIClient
 from .ngtip_client import NGTIPClient
 from .virustotal_client import VirusTotalClient
 from .spiderfoot_client import SpiderFootClient
+from .hexstrike_client import HexStrikeClient
 
 __all__ = [
     "STIXExporter",
@@ -16,4 +17,5 @@ __all__ = [
     "NGTIPClient",
     "VirusTotalClient",
     "SpiderFootClient",
+    "HexStrikeClient",
 ]
