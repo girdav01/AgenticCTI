@@ -184,8 +184,11 @@ Multiple ways to access the integrated intelligence:
 
 - Docker and Docker Compose
 - Git
-- 8GB+ RAM recommended
+- 16GB+ RAM recommended (for optimal LLM performance)
+- NVIDIA GPU recommended (RTX 4070 Ti Super or equivalent)
 - Ollama (for local LLM) or OpenAI/Anthropic API key
+
+**Recommended LLM Models**: See [docs/RECOMMENDED_MODELS.md](docs/RECOMMENDED_MODELS.md) for optimized model recommendations for CTI analysis and malware investigation.
 
 ### Step 1: Clone Repository
 
@@ -207,10 +210,14 @@ nano .env
 Key configuration options:
 
 ```bash
-# LLM Configuration
+# LLM Configuration (recommended for CTI analysis)
 LLM_PROVIDER=ollama
-LLM_MODEL=llama3.2:latest
+LLM_MODEL=ALIENTELLIGENCE/cybersecuritythreatanalysisv2
 LLM_BASE_URL=http://localhost:11434
+
+# Alternative models:
+# LLM_MODEL=llama3.2:latest  # General purpose
+# LLM_MODEL=qwen2.5-coder:14b-q4_K_M  # For malware/code analysis
 
 # NG-TIP Integration (enabled by default)
 NGTIP_ENABLED=true
@@ -239,12 +246,22 @@ docker-compose logs -f
 docker-compose ps
 ```
 
-### Step 4: Pull LLM Model (if using Ollama)
+### Step 4: Pull LLM Models (if using Ollama)
+
+For optimal CTI analysis, we recommend using specialized models:
 
 ```bash
-# Pull Llama model
+# Primary CTI analysis model (recommended daily driver)
+docker exec -it agentic-cti-ollama ollama pull ALIENTELLIGENCE/cybersecuritythreatanalysisv2
+
+# Code/malware analysis model (optional but recommended)
+docker exec -it agentic-cti-ollama ollama pull qwen2.5-coder:14b-q4_K_M
+
+# Alternative: General purpose model
 docker exec -it agentic-cti-ollama ollama pull llama3.2:latest
 ```
+
+**Note**: See [docs/RECOMMENDED_MODELS.md](docs/RECOMMENDED_MODELS.md) for detailed model recommendations based on your hardware and use case.
 
 ### Step 5: Access Services
 

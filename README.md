@@ -92,7 +92,11 @@ AgenticCTI/
 
 - Python 3.9+
 - Docker and Docker Compose (for containerized deployment)
+- 16GB+ RAM recommended (for optimal LLM performance with specialized CTI models)
+- NVIDIA GPU recommended (RTX 4070 Ti Super or equivalent for best performance)
 - Ollama (for local LLM) or API keys for OpenAI/Anthropic
+
+**💡 Recommended Models**: For optimal CTI analysis, we recommend specialized models like `ALIENTELLIGENCE/cybersecuritythreatanalysisv2` for threat intelligence and `qwen2.5-coder:14b` for malware analysis. See [docs/RECOMMENDED_MODELS.md](docs/RECOMMENDED_MODELS.md) for complete hardware-optimized model recommendations.
 
 ### Installation
 
@@ -149,9 +153,11 @@ docker-compose logs -f
 Key configuration options:
 
 ```bash
-# LLM Provider
+# LLM Provider (recommended CTI-optimized model)
 LLM_PROVIDER=ollama  # Options: ollama, openai, anthropic
-LLM_MODEL=llama3.2:latest
+LLM_MODEL=ALIENTELLIGENCE/cybersecuritythreatanalysisv2  # Recommended for CTI
+# Alternative: LLM_MODEL=llama3.2:latest  # General purpose
+# Alternative: LLM_MODEL=qwen2.5-coder:14b-q4_K_M  # For malware/code analysis
 LLM_BASE_URL=http://localhost:11434
 
 # Email Notifications
