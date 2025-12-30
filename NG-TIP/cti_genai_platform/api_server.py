@@ -118,12 +118,19 @@ async def startup_event():
             embedding_model=config.embedding_model
         )
 
-        # Initialize Graph Manager
-        graph_manager = GraphManager(
-            uri=config.neo4j_uri,
-            user=config.neo4j_user,
-            password=config.neo4j_password
-        )
+        # Initialize Graph Manager (optional)
+        if config.neo4j_enabled:
+            graph_manager = GraphManager(
+                uri=config.neo4j_uri,
+                user=config.neo4j_user,
+                password=config.neo4j_password
+            )
+            if graph_manager.driver:
+                logger.info("Graph Manager initialized successfully")
+            else:
+                logger.warning("Graph Manager failed to connect - graph features disabled")
+        else:
+            logger.info("Neo4j disabled - graph features will not be available")
 
         logger.info("NG-TIP Platform API initialized successfully")
 

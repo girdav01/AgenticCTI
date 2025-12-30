@@ -31,7 +31,8 @@ class Config:
     opencti_url: Optional[str] = None
     opencti_token: Optional[str] = None
     
-    # Neo4j Configuration
+    # Neo4j Configuration (Optional - for graph features)
+    neo4j_enabled: bool = True
     neo4j_uri: str = "bolt://localhost:7687"
     neo4j_user: str = "neo4j"
     neo4j_password: str = "password"
@@ -81,6 +82,7 @@ class Config:
             misp_key=os.getenv('MISP_API_KEY'),
             opencti_url=os.getenv('OPENCTI_URL'),
             opencti_token=os.getenv('OPENCTI_TOKEN'),
+            neo4j_enabled=os.getenv('NGTIP_NEO4J_ENABLED', 'true').lower() == 'true',
             neo4j_uri=os.getenv('NEO4J_URI', 'bolt://localhost:7687'),
             neo4j_user=os.getenv('NEO4J_USER', 'neo4j'),
             neo4j_password=os.getenv('NEO4J_PASSWORD', 'password'),

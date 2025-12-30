@@ -2,7 +2,21 @@
 
 Get up and running with the integrated AgenticCTI and NG-TIP platform in under 10 minutes.
 
-## 🚀 5-Minute Setup
+## 📋 Choose Your Deployment
+
+AgenticCTI offers three deployment profiles to match your needs:
+
+| Profile | Memory | Features | Best For |
+|---------|--------|----------|----------|
+| **Minimal** | ~2GB | Core CTI + RAG | Testing, small teams |
+| **Standard** | ~3GB | + API integrations | Daily operations |
+| **Full** | ~4GB | + Graph database | SOC/MSSP, advanced hunting |
+
+**See [Deployment Options](docs/DEPLOYMENT_OPTIONS.md) for detailed comparison.**
+
+This guide shows **Minimal** deployment. For other profiles, see the Deployment Options guide.
+
+## 🚀 5-Minute Setup (Minimal Profile)
 
 ### 1. Prerequisites Check
 
@@ -36,15 +50,23 @@ nano .env  # or vim, code, etc.
 ```bash
 # In .env file, update these:
 LLM_MODEL=ALIENTELLIGENCE/cybersecuritythreatanalysisv2
-NEO4J_PASSWORD=your-secure-password
 STREAMLIT_PASSWORD=your-admin-password
+
+# For Minimal profile, disable Neo4j to save resources:
+NGTIP_NEO4J_ENABLED=false
+
+# Optional: Set password if you plan to upgrade to Full later
+NEO4J_PASSWORD=your-secure-password
 ```
 
 ### 3. Start All Services
 
 ```bash
-# Start the entire stack
+# Minimal profile (no Neo4j - saves ~500MB RAM)
 docker-compose up -d
+
+# OR Full profile (includes Neo4j graph features)
+# docker-compose --profile full up -d
 
 # Wait ~30 seconds for services to initialize
 sleep 30
@@ -71,9 +93,11 @@ Open your browser:
 |---------|-----|-------------|
 | **AgenticCTI UI** | http://localhost:8501 | admin / your-password |
 | **NG-TIP Platform** | http://localhost:8504 | No auth (configure in UI) |
-| **Neo4j Browser** | http://localhost:7474 | neo4j / your-neo4j-password |
 | **AgenticCTI API** | http://localhost:8000/docs | API Docs |
 | **NG-TIP API** | http://localhost:8503/docs | API Docs |
+| **Neo4j Browser** ⚙️ | http://localhost:7474 | neo4j / password (Full profile only) |
+
+⚙️ = Only available in Full deployment profile
 
 ## 🎯 First Tasks
 
@@ -186,9 +210,11 @@ docker exec -it agentic-cti-ollama ollama pull ALIENTELLIGENCE/cybersecuritythre
 df -h
 ```
 
-### NG-TIP Cannot Connect to Neo4j
+### NG-TIP Cannot Connect to Neo4j (Full Profile Only)
 
 ```bash
+# Only applies if using Full profile
+
 # Check Neo4j is running
 docker-compose logs neo4j | grep "Started"
 
@@ -198,6 +224,8 @@ docker exec -it ngtip-neo4j cypher-shell -u neo4j -p your-password "RETURN 1;"
 # Restart NG-TIP services
 docker-compose restart ngtip-api ngtip-ui
 ```
+
+**If using Minimal/Standard profile**: Neo4j is intentionally disabled. This is normal - graph features will show as unavailable in NG-TIP.
 
 ### Agent Not Pushing to NG-TIP
 
@@ -211,6 +239,40 @@ grep NGTIP_ENABLED .env
 # Check agent logs for errors
 docker-compose logs agentic-cti | grep -i ngtip
 ```
+
+## 🔄 Upgrading Deployment Profiles
+
+### Minimal → Standard (Add API Integrations)
+
+No Docker changes needed - just add API keys to `.env`:
+
+```bash
+# Edit .env
+VIRUSTOTAL_ENABLED=true
+VIRUSTOTAL_API_KEY=your-virustotal-key
+
+SPIDERFOOT_ENABLED=true
+SPIDERFOOT_URL=http://localhost:5001
+
+# Restart to apply changes
+docker-compose restart
+```
+
+### Standard → Full (Add Graph Features)
+
+Enable Neo4j for relationship visualization:
+
+```bash
+# Edit .env
+NGTIP_NEO4J_ENABLED=true
+NEO4J_PASSWORD=secure-password
+
+# Restart with full profile
+docker-compose down
+docker-compose --profile full up -d
+```
+
+**Data is preserved** during upgrades - no intelligence lost!
 
 ## 📚 Next Steps
 
